@@ -2,36 +2,58 @@ version: "2.2"
 
 services:
   master:
-    build: ./master
+    build: 
+      context: ./master
+      args:
+        - PORT_UVICORN=$PORT_UVICORN_MASTER
+    environment:
+      - SECONDARY_INFO=$SECONDARY_INFO
     ports: 
-      - 8000:8000
+      - $PORT_UVICORN_MASTER:$PORT_UVICORN_MASTER
     networks:
       - deploy_network1
       - deploy_network2
+    restart: on-failure
+    container_name: master
+
   secondary1:
     build:
       context: secondary/
       args:
-        - PORT_UVICORN=65432
+        - PORT_UVICORN=$PORT_UVICORN_SECONDARY1
     environment:
-      - PORT=65431
+      - PORT=$PORT_SECONDARY1
     ports: 
-      - 65432:65432
+      - $PORT_UVICORN_SECONDARY1:$PORT_UVICORN_SECONDARY1
+      - $PORT_SECONDARY1:$PORT_SECONDARY1
+    depends_on: 
+      - master
+    links:
+      - master
     networks:
       - deploy_network1
-    # container_name: secondary1
+    restart: on-failure
+    container_name: secondary1
+
   secondary2:
     build:
       context: secondary/
       args:
-        - PORT_UVICORN=65433
+        - PORT_UVICORN=$PORT_UVICORN_SECONDARY2
     environment:
-      - PORT=65430
+      - PORT=$PORT_SECONDARY2
     ports: 
-      - 65433:65433
+      - $PORT_UVICORN_SECONDARY2:$PORT_UVICORN_SECONDARY2
+      - $PORT_SECONDARY2:$PORT_SECONDARY2
+    depends_on: 
+      - master
+    links:
+      - master
     networks:
       - deploy_network2
-    # container_name: secondary2
+    restart: on-failure
+    container_name: secondary2
+
 networks:
   deploy_network1:
     driver: bridge
