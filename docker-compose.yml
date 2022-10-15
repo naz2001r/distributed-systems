@@ -1,10 +1,39 @@
 version: "2.2"
 
 services:
-  fastapi:
-    build: ./
+  master:
+    build: ./master
     ports: 
       - 8000:8000
-    # networks:
-    #   - deploy_network
-    # container_name: fastapi
+    networks:
+      - deploy_network1
+      - deploy_network2
+  secondary1:
+    build:
+      context: secondary/
+      args:
+        - PORT_UVICORN=65432
+    environment:
+      - PORT=65431
+    ports: 
+      - 65432:65432
+    networks:
+      - deploy_network1
+    # container_name: secondary1
+  secondary2:
+    build:
+      context: secondary/
+      args:
+        - PORT_UVICORN=65433
+    environment:
+      - PORT=65430
+    ports: 
+      - 65433:65433
+    networks:
+      - deploy_network2
+    # container_name: secondary2
+networks:
+  deploy_network1:
+    driver: bridge
+  deploy_network2:
+    driver: bridge
