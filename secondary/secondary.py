@@ -5,7 +5,7 @@ from threading import Thread
 
 app = FastAPI()
 
-HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
+HOST = "0.0.0.0"  # Standard loopback interface address (localhost)
 PORT = int(os.environ['PORT'])  # Port to listen on (non-privileged ports are > 1023)
 
 data = []
@@ -24,7 +24,7 @@ def start_server(s, continue_run):
                 message = conn.recv(1024)
                 if message:
                     data.append(message)
-                    conn.sendall(b'done')
+                    conn.sendall(b'Done')
     except:
         print('Close')
 
