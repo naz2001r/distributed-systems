@@ -1,0 +1,10 @@
+version: "2.2"
+
+services:
+  fastapi:
+    build: ./
+    ports: 
+      - 8000:8000
+    # networks:
+    #   - deploy_network
+    # container_name: fastapi
