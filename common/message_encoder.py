@@ -1,6 +1,6 @@
 from numpy import frombuffer, uint32
 
-from message import Message, MessageHeader, MessageType
+from common.message import Message, MessageHeader, MessageType
 
 class MessageEncoder:
     # Message header encoding consists of 8 bytes (64 bits) and has the following layout:

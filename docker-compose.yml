@@ -3,7 +3,8 @@ version: "2.2"
 services:
   master:
     build: 
-      context: ./master
+      context: ./
+      dockerfile: ./master/Dockerfile
       args:
         - PORT_UVICORN=$PORT_UVICORN_MASTER
     environment:
@@ -18,7 +19,8 @@ services:
 
   secondary1:
     build:
-      context: secondary/
+      context: ./
+      dockerfile: ./secondary/Dockerfile
       args:
         - PORT_UVICORN=$PORT_UVICORN_SECONDARY1
     environment:
@@ -36,7 +38,8 @@ services:
 
   secondary2:
     build:
-      context: secondary/
+      context: ./
+      dockerfile: ./secondary/Dockerfile
       args:
         - PORT_UVICORN=$PORT_UVICORN_SECONDARY2
     environment:
