@@ -3,3 +3,4 @@ pillow==9.0.1
 aiofiles==0.4.0
 uvicorn
 pydantic
+numpy
