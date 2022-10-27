@@ -32,13 +32,13 @@ def start_server(s, continue_run):
                         raise ValueError("Unexpected message received! " +  
                                         f"Expected {MessageType.REQUEST}, but received {request_message_header.type}.")
 
-                    if request_message_header.number > 0:
+                    if request_message_header.number <= 0:
                         raise ValueError("Request message number should be a positive number!")
 
                     if request_message_header.data_size == 0:         
                         raise ValueError(f"Master didn't send any data to store!")
 
-                    data_buffer = s.recv(request_message_header.data_size)
+                    data_buffer = conn.recv(request_message_header.data_size)
                     data = data_buffer.decode("utf-8")
                     data_storage.append(data)
 
