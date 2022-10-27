@@ -4,9 +4,10 @@ services:
   master:
     build: 
       context: ./
-      dockerfile: ./master/Dockerfile
+      dockerfile: ./Dockerfile
       args:
         - PORT_UVICORN=$PORT_UVICORN_MASTER
+        - NODE_TYPE=$MASTER_TYPE
     environment:
       - SECONDARY_INFO=$SECONDARY_INFO
     ports: 
@@ -20,9 +21,10 @@ services:
   secondary1:
     build:
       context: ./
-      dockerfile: ./secondary/Dockerfile
+      dockerfile: ./Dockerfile
       args:
         - PORT_UVICORN=$PORT_UVICORN_SECONDARY1
+        - NODE_TYPE=$SECONDARY_TYPE
     environment:
       - PORT=$PORT_SECONDARY1
     ports: 
@@ -39,9 +41,10 @@ services:
   secondary2:
     build:
       context: ./
-      dockerfile: ./secondary/Dockerfile
+      dockerfile: ./Dockerfile
       args:
         - PORT_UVICORN=$PORT_UVICORN_SECONDARY2
+        - NODE_TYPE=$SECONDARY_TYPE
     environment:
       - PORT=$PORT_SECONDARY2
     ports: 
