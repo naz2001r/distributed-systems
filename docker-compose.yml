@@ -25,7 +25,6 @@ services:
       - PORT=$PORT_SECONDARY1
     ports: 
       - $PORT_UVICORN_SECONDARY1:$PORT_UVICORN_SECONDARY1
-      - $PORT_SECONDARY1:$PORT_SECONDARY1
     depends_on: 
       - master
     links:
@@ -44,7 +43,6 @@ services:
       - PORT=$PORT_SECONDARY2
     ports: 
       - $PORT_UVICORN_SECONDARY2:$PORT_UVICORN_SECONDARY2
-      - $PORT_SECONDARY2:$PORT_SECONDARY2
     depends_on: 
       - master
     links:

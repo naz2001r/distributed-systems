@@ -8,5 +8,5 @@ COPY ./ ./
 RUN python -m pip install --upgrade pip
 RUN pip install -r ./requirements.txt
 
-RUN echo ${PORT_UVICORN}
+EXPOSE ${PORT_UVICORN}
 CMD uvicorn master:app --host 0.0.0.0 --port ${PORT_UVICORN}
