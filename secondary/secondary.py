@@ -7,14 +7,17 @@ from threading import Thread
 from common.message import MessageFactory, MessageType
 from common.message_encoder import MessageEncoder
 
+logging.basicConfig(level=logging.INFO)
+
 app = FastAPI()
 
 HOST = "0.0.0.0"  # Standard loopback interface address (localhost)
+# For local run use: os.environ['PORT'] = str(65441)
 PORT = int(os.environ['PORT'])  # Port to listen on (non-privileged ports are > 1023)
 
 data_storage = []
 
-@app.get("/get_list")
+@app.get("/get_data")
 async def root():
     logging.info(f"List of messages at node:\n{data_storage}")
     return {"messages": data_storage}
