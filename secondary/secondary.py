@@ -13,6 +13,7 @@ app = FastAPI()
 
 HOST = "0.0.0.0"  # Standard loopback interface address (localhost)
 # For local run use: os.environ['PORT'] = str(65441)
+# os.environ['PORT'] = str(65441)
 PORT = int(os.environ['PORT'])  # Port to listen on (non-privileged ports are > 1023)
 
 data_storage = []

@@ -1,4 +1,5 @@
 import os
+import ast
 import json
 import socket
 import logging
@@ -18,8 +19,9 @@ class Master:
         self.data_storage = []
 
         # For local run use: {"0.0.0.0": 65441, "0.0.0.0": 65442}
+        # self.secondaries_info = {"0.0.0.0": 5002, "0.0.0.0": 5002}
         info_json = json.dumps(os.environ['SECONDARY_INFO'])
-        self.secondaries_info = json.loads(info_json )
+        self.secondaries_info = ast.literal_eval(json.loads(info_json))
         # self.secondaries_info = json.loads(os.environ['SECONDARY_INFO']) 
         logging.info(f"Secondary info: {self.secondaries_info}")
 
@@ -36,7 +38,7 @@ class Master:
     
     def _replicate_data_to_secondaries(self, data:str) -> bool:
         try:
-            data_replication_message = self._create_message_for_data_replication(data) 
+            data_replication_message = self._create_message_for_data_replication(data)
 
             for host, port in self.secondaries_info.items():
                 logging.info(host)
@@ -66,8 +68,9 @@ class Master:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as secondary_client_socket:
             secondary_address = (host, port)
             secondary_client_socket.connect(secondary_address)
-
-            request_message_buffer = MessageEncoder.encode_message(request_message)       
+            logging.info(f'Conncet to {host}:{port}')
+            logging.info(f"Request message: {MessageEncoder.encode_message(request_message)}")
+            request_message_buffer = MessageEncoder.encode_message(request_message)     
             secondary_client_socket.sendall(request_message_buffer)
 
             response_message_header_buffer = secondary_client_socket.recv(MessageEncoder.HEADER_BYTES_SIZE)
