@@ -1,6 +1,7 @@
 import os
 import json
 import socket
+import logging
 from fastapi import FastAPI
 from threading import Lock
 
@@ -8,6 +9,7 @@ from common.message import Message, MessageFactory, MessageType
 from common.message_encoder import MessageEncoder
 
 SECONDARY_INFO = json.loads(os.environ['SECONDARY_INFO'])
+logging.info(f"Secondary Info:{str(SECONDARY_INFO)}")
 app = FastAPI()
 
 data_storage = []
@@ -65,6 +67,7 @@ async def root(data):
             port=port,
             request_message=request_message
         ))
+        logging.info(f"Got answer '{request_message}' from Secondary {host}:{port}")
 
     data_storage.append(data)
     return {"Status": 200}

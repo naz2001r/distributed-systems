@@ -1,5 +1,6 @@
 import os
 import socket
+import logging
 from fastapi import FastAPI
 from threading import Thread
 
@@ -15,6 +16,7 @@ data_storage = []
 
 @app.get("/get_list")
 async def root():
+    logging.info(f"List of messages at node:\n{data_storage}")
     return {"messages": data_storage}
 
 
@@ -24,7 +26,7 @@ def start_server(s, continue_run):
             conn, addr = s.accept()
             with conn:
                 try:
-                    print(f"Connected by {addr}")
+                    logging.info(f"Connected by {addr}")
                     request_message_header_buffer = conn.recv(MessageEncoder.HEADER_BYTES_SIZE)
                     request_message_header = MessageEncoder.decode_message_header(request_message_header_buffer)
 
@@ -41,6 +43,7 @@ def start_server(s, continue_run):
                     data_buffer = conn.recv(request_message_header.data_size)
                     data = data_buffer.decode("utf-8")
                     data_storage.append(data)
+                    logging.info(f'Received message:{data}')
 
                     # If response doesn't contain any data, it means success.
                     # Otherwise, data represents an error message explaining why it has failed.
@@ -54,7 +57,7 @@ def start_server(s, continue_run):
                     conn.sendall(response_message_buffer)
 
     except:
-        print('Close')
+        logging.info("Can't start server")
 
 @app.on_event("startup")
 def startup_event():
