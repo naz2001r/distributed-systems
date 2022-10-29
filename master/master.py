@@ -18,7 +18,9 @@ class Master:
         self.data_storage = []
 
         # For local run use: {"0.0.0.0": 65441, "0.0.0.0": 65442}
-        self.secondaries_info = json.loads(os.environ['SECONDARY_INFO']) 
+        info_json = json.dumps(os.environ['SECONDARY_INFO'])
+        self.secondaries_info = json.loads(info_json )
+        # self.secondaries_info = json.loads(os.environ['SECONDARY_INFO']) 
         logging.info(f"Secondary info: {self.secondaries_info}")
 
     def append_data(self, data:str) -> bool:
