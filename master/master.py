@@ -70,7 +70,7 @@ class Master:
             logging.info(f"Connected to '{host}:{port}'.")
 
             request_message_buffer = MessageEncoder.encode_message(request_message)     
-            secondary_client_socket.sendall(request_message_buffer)
+            await self.event_loop.sock_sendall(secondary_client_socket, request_message_buffer)
             logging.info(f"Replication data '{request_message.data}'.")
 
             response_message_header_buffer = await self.event_loop.sock_recv(secondary_client_socket, MessageEncoder.HEADER_BYTES_SIZE)
