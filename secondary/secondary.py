@@ -19,15 +19,19 @@ class Secondary:
 
     def __init__(self) -> None:
         self.data_storage = []
+        self.continue_run = True
+
+        self.socket = None
+        self.thread = None
         logging.info(f"Secondary Port: {self.PORT}")
 
     def get_data(self) -> List[str]:
         return self.data_storage
 
-    def start_server(self,socket, continue_run) -> None:
+    def start_server(self) -> None:
         try:
-            while continue_run:
-                conn, addr = socket.accept()
+            while self.continue_run:
+                conn, addr = self.socket.accept()
                 with conn:
                     try:
                         logging.info(f"Connected by {addr}")
@@ -65,6 +69,18 @@ class Secondary:
         except:
             logging.info("Can't start server")
 
+    def start_receiving_data(self):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.bind((self.HOST, self.PORT))
+        self.socket.listen()
+        self.thread = Thread(target=self.start_server)
+        self.thread.start()
+
+    def stop_receiving_data(self):
+        self.continue_run = False
+        self.socket.close()
+        self.thread.join()
+
     def _make_artificial_delay(self):
         delay_probability = random.uniform(0, 1)
         if delay_probability > 0.5:
@@ -74,15 +90,9 @@ class Secondary:
 app = FastAPI()
 
 @app.on_event("startup")
-def startup_event():
-    app.continue_run = True
+def start_server():
     app.secondary = Secondary()
-
-    app.socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    app.socket.bind((app.secondary.HOST, app.secondary.PORT))
-    app.socket.listen()
-    app.thread = Thread(target=app.secondary.start_server, args=(app.socket,app.continue_run))
-    app.thread.start()
+    app.secondary.start_receiving_data()
 
 @app.get("/get_data")
 async def get_data():
@@ -91,7 +101,5 @@ async def get_data():
     return {"messages": data_storage}
 
 @app.on_event("shutdown")
-def shutdown_event():
-    app.continue_run = False
-    app.socket.close()
-    app.thread.join()
+def stop_server():
+    app.secondary.start_receiving_data()
