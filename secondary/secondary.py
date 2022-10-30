@@ -1,6 +1,8 @@
 import os
+import random
 import socket
 import logging
+import time
 from typing import List
 from fastapi import FastAPI
 from threading import Thread
@@ -9,7 +11,6 @@ from common.message import MessageFactory, MessageType
 from common.message_encoder import MessageEncoder
 
 logging.basicConfig(level=logging.INFO)
-
 
 class Secondary:
     HOST = "0.0.0.0" # Standard loopback interface address (localhost)
@@ -48,19 +49,26 @@ class Secondary:
                         self.data_storage.append(data)
                         logging.info(f'Received message:{data}')
 
-                        # If response doesn't contain any data, it means success.
-                        # Otherwise, data represents an error message explaining why it has failed.
+                        self._make_artificial_delay()
+
+                        # Sending empty data in response message, in case of successful replication.
                         response_message = MessageFactory.create_response_message(request_message_header.number)
                         response_message_buffer = MessageEncoder.encode_message(response_message)
                         conn.sendall(response_message_buffer)
 
                     except Exception as error:
+                        # Sending error message as data in response message, in case of failed replication.
                         response_message = MessageFactory.create_response_message(request_message_header.number, str(error))
                         response_message_buffer = MessageEncoder.encode_message(response_message)
                         conn.sendall(response_message_buffer)
 
         except:
             logging.info("Can't start server")
+
+    def _make_artificial_delay(self):
+        delay_probability = random.uniform(0, 1)
+        if delay_probability > 0.5:
+            time.sleep(5)
 
 
 app = FastAPI()
