@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 
 class Secondary:
     HOST = "0.0.0.0" # Standard loopback interface address (localhost)
-    # For local run use: os.environ['PORT'] = str(65441)
+    # For local run use: os.environ['PORT'] = 65441
     PORT = int(os.environ['PORT']) # Port to listen on (non-privileged ports are > 1023)
 
     def __init__(self) -> None:
@@ -50,10 +50,12 @@ class Secondary:
 
                         data_buffer = conn.recv(request_message_header.data_size)
                         data = data_buffer.decode("utf-8")
+
+                        # Make a delay before storing data.
+                        self._make_artificial_delay()
+
                         self.data_storage.append(data)
                         logging.info(f'Received message:{data}')
-
-                        self._make_artificial_delay()
 
                         # Sending empty data in response message, in case of successful replication.
                         response_message = MessageFactory.create_response_message(request_message_header.number)
