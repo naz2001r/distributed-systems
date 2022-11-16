@@ -19,6 +19,7 @@ class Secondary:
 
     def __init__(self) -> None:
         self.data_storage = []
+        self.temp_data_storage = {}
         self.continue_run = True
 
         self.socket = None
@@ -53,9 +54,8 @@ class Secondary:
 
                         # Make a delay before storing data.
                         self._make_artificial_delay()
-
-                        self.data_storage.append(data)
-                        logging.info(f'Received message:{data}')
+                        
+                        self._store_data(data, request_message_header.number)
 
                         # Sending empty data in response message, in case of successful replication.
                         response_message = MessageFactory.create_response_message(request_message_header.number)
@@ -82,6 +82,20 @@ class Secondary:
         self.continue_run = False
         self.socket.close()
         self.thread.join()
+
+    def _store_data(self, data, data_number):
+        if len(self.data_storage) + 1 == data_number:
+            self.data_storage.append(data)
+            logging.info(f'Received message:{data}')
+            num = len(self.data_storage) + 1
+            while num in self.temp_data_storage.keys():
+                self.data_storage.append(self.temp_data_storage[num])
+                del self.temp_data_storage[num]
+                num += 1
+        elif len(self.data_storage) <= data_number:
+            logging.info(f"Received duplicate message: {data}")
+        else:
+            self.temp_data_storage[len(self.data_storage) + 1] = data
 
     def _make_artificial_delay(self):
         delay_probability = random.uniform(0, 1)
