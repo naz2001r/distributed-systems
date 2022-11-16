@@ -10,7 +10,7 @@ from threading import Lock, Thread
 
 from common.message import Message, MessageFactory, MessageType
 from common.message_encoder import MessageEncoder
-from master.replication_latch import ReplicationLatch
+from replication_latch import ReplicationLatch
 
 logging.basicConfig(level=logging.INFO)
 
