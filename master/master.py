@@ -30,8 +30,13 @@ class Master:
 
     def append_data(self, data:str, write_concern:int) -> bool:
         if write_concern > self.max_write_concern:
-            logging.info(f"Write concern of '{write_concern}' is too big for a current application. " +
+            logging.error(f"Write concern of '{write_concern}' is too big for a current application. " +
                          f"Maximum write concern equals to '{self.max_write_concern}'.")
+            return False
+        
+        if write_concern <= 0:
+            logging.error(f"Write concern of '{write_concern}' is too small for a current application. " +
+                         f"Write concern must be higher than '0'.")
             return False
 
         try:
