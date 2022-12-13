@@ -51,6 +51,7 @@ services:
       - $PORT_UVICORN_SECONDARY2:$PORT_UVICORN_SECONDARY2
     depends_on: 
       - master
+      - "secondary1"
     links:
       - master
     networks:
