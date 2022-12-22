@@ -1,4 +1,3 @@
-import datetime
 import os
 import ast
 import json
@@ -6,11 +5,11 @@ import socket
 import logging
 from typing import List
 from fastapi import FastAPI, HTTPException
-from threading import Lock, Thread
+from threading import Lock
 
 from common.message import Message, MessageFactory, MessageType
 from common.message_encoder import MessageEncoder
-from replication_latch import ReplicationLatch
+from replication_manager import ReplicationManager
 
 logging.basicConfig(level=logging.INFO)
 
@@ -28,7 +27,7 @@ class Master:
         # Quantity of secondaries plus a single master defines a maximum value for a write concern.
         self.max_write_concern = len(self.secondaries_info) + 1
 
-    def append_data(self, data:str, write_concern:int) -> bool:
+    def append_data(self, data: str, write_concern: int) -> bool:
         if write_concern > self.max_write_concern:
             logging.error(f"Write concern of '{write_concern}' is too big for a current application. " +
                          f"Maximum write concern equals to '{self.max_write_concern}'.")
@@ -39,35 +38,35 @@ class Master:
                          f"Write concern must be higher than '0'.")
             return False
 
-        try:
-            data_replication_awaited = write_concern - 1
-            data_replication_latch = ReplicationLatch(data_replication_awaited)
-            self._replicate_data_to_secondaries(data, data_replication_latch)
-            data_replication_status = data_replication_latch.wait_for_replications(timeout=15.0)
-
-            if not data_replication_status:
-                logging.error(f"Appending data '{data}' has failed.")
-                return False
-
-            self.data_storage.append(data)
-            return True
-
-        except TimeoutError:
-            logging.error(f"Appending data '{data}' has timed out.")
+        data_replication_status = self._replicate_data_to_secondaries(data, write_concern)
+        if not data_replication_status:
+            logging.error(f"Appending data '{data}' has failed.")
             return False
+
+        self.data_storage.append(data)
+        return True
 
     def get_data(self) -> List[str]:
         return self.data_storage
     
-    def _replicate_data_to_secondaries(self, data:str, data_replication_latch: ReplicationLatch) -> list:
+    def _replicate_data_to_secondaries(self, data: str, write_concern: int) -> list:
         data_replication_message = self._create_message_for_data_replication(data)
+        data_replication_manager = ReplicationManager(replication_executor=self._replicate_data_to_secondary,
+                                                      replication_data=data_replication_message,
+                                                      replication_awaited=write_concern-1)
 
-        for host, port in self.secondaries_info.items():   
-            replication_thread = Thread(target=self._replicate_data_to_secondary, args=(host, port, data_replication_message, data_replication_latch))
-            replication_thread.daemon = True
-            replication_thread.start()
+        for host, port in self.secondaries_info.items():
+            data_replication_manager.start_replication(host, port)
 
-    def _replicate_data_to_secondary(self, host, port, request_message: Message, replication_latch: ReplicationLatch):
+        try:
+            data_replication_status = data_replication_manager.wait_for_replication(timeout=60.0)
+            return data_replication_status
+
+        except TimeoutError:
+            logging.error(f"Replication of data '{data}' has timed out.")
+            return False
+
+    def _replicate_data_to_secondary(self, host, port, request_message: Message) -> bool:
         try:
             logging.info(f"Replication to secondary '{host}:{port}' started...")
 
@@ -87,13 +86,13 @@ class Master:
                     logging.error("Unexpected message received! " +  
                                  f"Expected '{MessageType.RESPONSE}', " +
                                  f"but received '{response_message_header.type}'.")
-                    return
+                    return False
 
                 if response_message_header.number != request_message.header.number:
                     logging.error("Response message number doesn't correspond to request message number! " +
                                  f"Expected '{request_message.header.number}', "
                                  f"but received '{response_message_header.number}'.")
-                    return
+                    return False
 
                 # If response doesn't contain any data, it means success.
                 # Otherwise, data represents an error message explaining why it has failed.
@@ -101,13 +100,14 @@ class Master:
                     error_message_buffer = secondary_client_socket.recv(response_message_header.data_size)
                     error_message = error_message_buffer.decode("utf-8")
                     logging.error(f"Secondary has failed to store data: '{error_message}'.")
-                    return
+                    return False
 
             logging.info(f"Replication to secondary '{host}:{port}' successfully ended.")
-            replication_latch.set_replication(True)
+            return True
             
         except Exception as error:
             logging.error(f"Replication to secondaries has failed with the error: {error}")
+            return False
 
     def _create_message_for_data_replication(self, data:str) -> Message:
         with self.message_number_locker:
