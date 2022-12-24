@@ -1,8 +1,7 @@
 from threading import Event, Thread
 from typing import Callable
 
-from master.replication_latch import ReplicationLatch
-
+from replication_latch import ReplicationLatch
 
 class ReplicationThread(Thread):
     def __init__(self, replication_action: Callable[[], bool], replication_latch: ReplicationLatch) -> None:
@@ -18,8 +17,7 @@ class ReplicationThread(Thread):
 
     def _retry_replication(self):
         # TODO: Think of a strategy for smart waiting logic. 
-        replication_stopped = self.replication_retry_stop_event.wait(self.replication_retry_delay_seconds)
-        return not replication_stopped
+        return self.replication_retry_stop_event.wait(self.replication_retry_delay_seconds)
 
     def run(self):
         replication_succeeded = False

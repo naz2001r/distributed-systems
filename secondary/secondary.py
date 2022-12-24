@@ -87,17 +87,21 @@ class Secondary:
         if len(self.data_storage) + 1 == data_number:
             self.data_storage.append(data)
             logging.info(f'Received message: {data}')
+            
+        elif len(self.data_storage) >= data_number:
+            logging.info(f"Received duplicate message: {data}")
+
+        else:
+            self.temp_data_storage[data_number] = data
+            logging.info(f"Added message '{data}' to temporary storage")
+            
+        if len(self.temp_data_storage) > 0:
             num = len(self.data_storage) + 1
             while num in self.temp_data_storage.keys():
                 self.data_storage.append(self.temp_data_storage[num])
                 del self.temp_data_storage[num]
                 num += 1
                 logging.info(f"Got message '{data}' from temporary storage")
-        elif len(self.data_storage) <= data_number:
-            logging.info(f"Received duplicate message: {data}")
-        else:
-            self.temp_data_storage[len(self.data_storage) + 1] = data
-            logging.info(f"Added message '{data}' to temporary storage")
 
     def _make_artificial_delay(self):
         delay_probability = random.uniform(0, 1)

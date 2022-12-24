@@ -1,8 +1,8 @@
 from typing import Callable
 from common.message import Message
 
-from master.replication_latch import ReplicationLatch
-from master.replication_thread import ReplicationThread
+from replication_latch import ReplicationLatch
+from replication_thread import ReplicationThread
 
 class ReplicationManager():
     def __init__(self,
@@ -24,5 +24,5 @@ class ReplicationManager():
         for replication_thread in self.replication_threads:
             replication_thread.stop_replication_retry()
 
-    def wait_for_replication(self, timeout: int):
+    def wait_for_replication(self, timeout: float = None):
         return self.replication_latch.wait_for_replications(timeout=timeout)

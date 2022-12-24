@@ -38,12 +38,13 @@ class Master:
                          f"Write concern must be higher than '0'.")
             return False
 
+        self.data_storage.append(data)
+        
         data_replication_status = self._replicate_data_to_secondaries(data, write_concern)
         if not data_replication_status:
             logging.error(f"Appending data '{data}' has failed.")
             return False
 
-        self.data_storage.append(data)
         return True
 
     def get_data(self) -> List[str]:
@@ -59,7 +60,7 @@ class Master:
             data_replication_manager.start_replication(host, port)
 
         try:
-            data_replication_status = data_replication_manager.wait_for_replication(timeout=60.0)
+            data_replication_status = data_replication_manager.wait_for_replication()
             return data_replication_status
 
         except TimeoutError:
