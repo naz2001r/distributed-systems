@@ -3,6 +3,7 @@ from enum import IntEnum
 class MessageType(IntEnum):
     REQUEST = 0
     RESPONSE = 1
+    HEALTHCHECK = 2
 
 class MessageHeader:
     def __init__(self, type: MessageType, number: int, data_size: int):
@@ -49,5 +50,9 @@ class MessageFactory:
     @staticmethod
     def create_response_message(number: int, data: str = '') -> Message:
         return MessageFactory._create_message(MessageType.RESPONSE, number, data)
+
+    @staticmethod
+    def create_healthcheck_message(number: int = 0, data: str = '') -> Message:
+        return MessageFactory._create_message(MessageType.HEALTHCHECK, number, data)
 
     

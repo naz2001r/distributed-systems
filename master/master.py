@@ -4,12 +4,13 @@ import json
 import socket
 import logging
 from typing import List
-from fastapi import FastAPI, HTTPException
 from threading import Lock
+from fastapi import FastAPI, HTTPException
 
-from common.message import Message, MessageFactory, MessageType
+from health_checker import HealthChecker
 from common.message_encoder import MessageEncoder
 from replication_manager import ReplicationManager
+from common.message import Message, MessageFactory, MessageType
 
 logging.basicConfig(level=logging.INFO)
 
@@ -26,6 +27,12 @@ class Master:
 
         # Quantity of secondaries plus a single master defines a maximum value for a write concern.
         self.max_write_concern = len(self.secondaries_info) + 1
+
+        self.health_checkers = {}
+        for host, port in self.secondaries_info.items():
+            health_checker = HealthChecker(host, port)
+            self.health_checkers[host] = health_checker
+            health_checker.start()
 
     def append_data(self, data: str, write_concern: int) -> bool:
         if write_concern > self.max_write_concern:
@@ -124,6 +131,10 @@ def startup_event():
 @app.get("/get_data")
 async def get_data():
     return {"messages": app.master.get_data()}
+
+@app.get("/get_health")
+async def get_health():
+    return { key: value.get_status() for key,value in app.master.health_checkers.items}
 
 @app.post("/append_data")
 def append_data(data: str, write_concern: int):
