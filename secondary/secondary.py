@@ -21,7 +21,7 @@ class Secondary:
         self.data_storage = []
         self.temp_data_storage = {}
         self.continue_run = True
-
+        self.connection_threads = {}
         self.socket = None
         self.thread = None
         logging.info(f"Secondary Port: {self.PORT}")
@@ -29,50 +29,65 @@ class Secondary:
     def get_data(self) -> List[str]:
         return self.data_storage
 
+    def handle_client_connection(self, client_connection, adddress):
+        while True:
+            try:
+                request_message_header_buffer = client_connection.recv(MessageEncoder.HEADER_BYTES_SIZE)
+                if len(request_message_header_buffer) == 0:
+                    logging.info(f"End of connection with {adddress}")
+                    del self.connection_threads[adddress]
+                    client_connection.close()
+                    return
+
+                request_message_header = MessageEncoder.decode_message_header(request_message_header_buffer)
+
+                if request_message_header.number == MessageHeader.HEALTHCHECK_MSG_NUM:
+                    healthcheck_message = MessageFactory.create_healthcheck_response_message()
+                    healthcheck_message_buffer = MessageEncoder.encode_message(healthcheck_message)
+                    client_connection.sendall(healthcheck_message_buffer)
+                    continue
+
+                if request_message_header.type != MessageType.REQUEST:
+                    raise ValueError("Unexpected message received! " +  
+                                    f"Expected {MessageType.REQUEST}, but received {request_message_header.type}.")
+
+                if request_message_header.number < 0:
+                    raise ValueError("Request message number should be a positive number!")
+
+                if request_message_header.data_size == 0:    
+                    raise ValueError(f"Master didn't send any data to store!")
+
+                data_buffer = client_connection.recv(request_message_header.data_size)
+                data = data_buffer.decode("utf-8")
+
+                # Make a delay before storing data.
+                self._make_artificial_delay()
+
+                self._store_data(data, request_message_header.number)
+
+                # Sending empty data in response message, in case of successful replication.
+                response_message = MessageFactory.create_response_message(request_message_header.number)
+                response_message_buffer = MessageEncoder.encode_message(response_message)
+                client_connection.sendall(response_message_buffer)
+
+            except Exception as error:
+                # Sending error message as data in response message, in case of failed replication.
+                response_message = MessageFactory.create_response_message(request_message_header.number, str(error))
+                response_message_buffer = MessageEncoder.encode_message(response_message)
+                client_connection.sendall(response_message_buffer)
+
     def start_server(self) -> None:
         try:
             while self.continue_run:
-                conn, addr = self.socket.accept()
-                with conn:
-                    try:
-                        logging.info(f"Connected by {addr}")
-                        request_message_header_buffer = conn.recv(MessageEncoder.HEADER_BYTES_SIZE)
-                        request_message_header = MessageEncoder.decode_message_header(request_message_header_buffer)
+                logging.info(f'Accepting connections')
+                connection, address = self.socket.accept()
+                logging.info(f"Connected by {address}")
 
-                        if request_message_header.number==MessageHeader.HEALTHCHECK_MSG_NUM:
-                            healthcheck_message = MessageFactory.create_healthcheck_response_message()
-                            healthcheck_message_buffer = MessageEncoder.encode_message(healthcheck_message)
-                            conn.sendall(healthcheck_message_buffer)
-                            return None
+                connection_thread = Thread(target=self.handle_client_connection, args=(connection, address))
+                connection_thread.daemon = True
+                connection_thread.start()
 
-                        if request_message_header.type != MessageType.REQUEST:
-                            raise ValueError("Unexpected message received! " +  
-                                            f"Expected {MessageType.REQUEST}, but received {request_message_header.type}.")
-
-                        if request_message_header.number < 0:
-                            raise ValueError("Request message number should be a positive number!")
-
-                        if request_message_header.data_size == 0:         
-                            raise ValueError(f"Master didn't send any data to store!")
-
-                        data_buffer = conn.recv(request_message_header.data_size)
-                        data = data_buffer.decode("utf-8")
-
-                        # Make a delay before storing data.
-                        self._make_artificial_delay()
-                        
-                        self._store_data(data, request_message_header.number)
-
-                        # Sending empty data in response message, in case of successful replication.
-                        response_message = MessageFactory.create_response_message(request_message_header.number)
-                        response_message_buffer = MessageEncoder.encode_message(response_message)
-                        conn.sendall(response_message_buffer)
-
-                    except Exception as error:
-                        # Sending error message as data in response message, in case of failed replication.
-                        response_message = MessageFactory.create_response_message(request_message_header.number, str(error))
-                        response_message_buffer = MessageEncoder.encode_message(response_message)
-                        conn.sendall(response_message_buffer)
+                self.connection_threads[address] = connection_thread
 
         except:
             logging.info("Can't start server")
@@ -80,7 +95,7 @@ class Secondary:
     def start_receiving_data(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind((self.HOST, self.PORT))
-        self.socket.listen()
+        self.socket.listen(0)
         self.thread = Thread(target=self.start_server)
         self.thread.start()
 
@@ -130,4 +145,4 @@ async def get_data():
 
 @app.on_event("shutdown")
 def stop_server():
-    app.secondary.start_receiving_data()
+    app.secondary.stop_receiving_data()
