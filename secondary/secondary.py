@@ -1,14 +1,14 @@
 import os
-import random
-import socket
-import logging
 import time
+import socket
+import random
+import logging
 from typing import List
 from fastapi import FastAPI
 from threading import Thread
 
-from common.message import MessageFactory, MessageType
 from common.message_encoder import MessageEncoder
+from common.message import MessageFactory, MessageHeader, MessageType
 
 logging.basicConfig(level=logging.INFO)
 
@@ -39,11 +39,17 @@ class Secondary:
                         request_message_header_buffer = conn.recv(MessageEncoder.HEADER_BYTES_SIZE)
                         request_message_header = MessageEncoder.decode_message_header(request_message_header_buffer)
 
+                        if request_message_header.number==MessageHeader.HEALTHCHECK_MSG_NUM:
+                            healthcheck_message = MessageFactory.create_healthcheck_response_message()
+                            healthcheck_message_buffer = MessageEncoder.encode_message(healthcheck_message)
+                            conn.sendall(healthcheck_message_buffer)
+                            return None
+
                         if request_message_header.type != MessageType.REQUEST:
                             raise ValueError("Unexpected message received! " +  
                                             f"Expected {MessageType.REQUEST}, but received {request_message_header.type}.")
 
-                        if request_message_header.number <= 0:
+                        if request_message_header.number < 0:
                             raise ValueError("Request message number should be a positive number!")
 
                         if request_message_header.data_size == 0:         

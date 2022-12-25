@@ -1,7 +1,7 @@
 import socket
 import logging
 
-from enum import IntEnum 
+from enum import Enum 
 from typing import Callable
 from threading import Thread,Timer
 
@@ -11,13 +11,12 @@ from common.message import MessageFactory, MessageType
 logging.basicConfig(level=logging.INFO)
 
 
-class HealthStatus(IntEnum):
-    HEALTHY = 0
-    SUSPECTED = 1
-    UNHEALTHY = 2
+class HealthStatus(Enum):
+    HEALTHY = 'HEALTHY'
+    SUSPECTED = 'SUSPECTED'
+    UNHEALTHY = 'UNHEALTHY'
 
 class HealthChecker(Thread):
-    HEALTHCHECK_MSG_NUM=0
 
     def __init__(self, host: str,port: int):
         super().__init__()
@@ -27,7 +26,7 @@ class HealthChecker(Thread):
         self.clientSocket = socket.socket()  
         self.address = ( host,port )
         self.connected = False
-        self.connect()
+        self._connect()
 
     def __del__(self):
         self.clientSocket.close()
@@ -39,7 +38,6 @@ class HealthChecker(Thread):
         try:  
             self.clientSocket.connect(self.address)  
             self.clientSocket.settimeout(5.0)
-            logging.warning("(re)connection successful.")  
             self.connected = True 
         except socket.error:  
             self.connected = False
@@ -52,16 +50,18 @@ class HealthChecker(Thread):
     def _healthcheck(self) -> None:
         # attempt to send and receive wave, otherwise reconnect  
         try:
-            request = MessageFactory.create_healthcheck_message(self.HEALTHCHECK_MSG_NUM)
+
+            request = MessageFactory.create_healthcheck_request_message()
             request_bytes = MessageEncoder.encode_message(request)     
             self.clientSocket.send(request_bytes)  
 
             response_header_bytes = self.clientSocket.recv(MessageEncoder.HEADER_BYTES_SIZE)
+            logging.info(f'Hello :{len(response_header_bytes)}')
             response_header = MessageEncoder.decode_message_header(response_header_bytes)
 
-            if response_header.type != MessageType.HEALTHCHECK:
-                logging.error("Unexpected message received! " +  
-                                f"Expected '{MessageType.HEALTHCHECK}', " +
+            if response_header.type != MessageType.RESPONSE:
+                logging.error("Unexpected message received in health check! " +  
+                                f"Expected '{MessageType.RESPONSE}', " +
                                 f"but received '{response_header.type}'.")
                 self.health_status = HealthStatus.UNHEALTHY
 
@@ -87,11 +87,14 @@ class HealthChecker(Thread):
         except socket.error:  
             # set connection status and recreate socket  
             self.clientSocket = socket.socket()  
-            logging.warning("Connection lost... reconnecting")  
             while not self.connected:  
                 # attempt to reconnect, otherwise sleep for 0.1 seconds  
                 self.health_status = HealthStatus.UNHEALTHY
                 self._wait_before(self._connect)
+
+        except Exception as error:
+            logging.error(f'Unexpected error: {error}')
+            self.health_status = HealthStatus.UNHEALTHY
   
     def run(self):
         while True:  

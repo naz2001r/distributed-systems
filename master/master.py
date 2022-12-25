@@ -7,9 +7,9 @@ from typing import List
 from threading import Lock
 from fastapi import FastAPI, HTTPException
 
-from health_checker import HealthChecker
 from common.message_encoder import MessageEncoder
 from replication_manager import ReplicationManager
+from health_checker import HealthChecker,HealthStatus
 from common.message import Message, MessageFactory, MessageType
 
 logging.basicConfig(level=logging.INFO)
@@ -122,6 +122,12 @@ class Master:
             self.message_number+=1
             return MessageFactory.create_request_message(self.message_number, data)
 
+    def is_write_possible(self,write_concern:int) -> bool:
+        healthy_nodes_count = len([checker for checker in self.health_checkers.values() 
+                                    if checker.get_status() == HealthStatus.HEALTHY ])+1
+        return  write_concern <= healthy_nodes_count
+
+
 app = FastAPI()
 
 @app.on_event("startup")
@@ -134,15 +140,18 @@ async def get_data():
 
 @app.get("/get_health")
 async def get_health():
-    return { key: value.get_status() for key,value in app.master.health_checkers.items}
+    return { key: value.get_status() for key,value in app.master.health_checkers.items()}
 
 @app.post("/append_data")
 def append_data(data: str, write_concern: int):
-    append_status = app.master.append_data(data, write_concern)
+    if not app.master.is_write_possible():
+        return {"Write concern is higher than number of healty nodes."}
 
+    append_status = app.master.append_data(data, write_concern)
     if not append_status:
         # Possible TODO: Propagate errors to the WebAPI.
         raise HTTPException(500)
         
     return {f"Appending data '{data}' has succeeded."}
+        
         
