@@ -5,6 +5,8 @@ class MessageType(IntEnum):
     RESPONSE = 1
 
 class MessageHeader:
+    HEALTHCHECK_MSG_NUM=0
+
     def __init__(self, type: MessageType, number: int, data_size: int):
         self._type = MessageType(type)
         self._number = int(number)
@@ -49,5 +51,13 @@ class MessageFactory:
     @staticmethod
     def create_response_message(number: int, data: str = '') -> Message:
         return MessageFactory._create_message(MessageType.RESPONSE, number, data)
+
+    @staticmethod
+    def create_healthcheck_request_message() -> Message:
+        return MessageFactory._create_message(MessageType.REQUEST, MessageHeader.HEALTHCHECK_MSG_NUM, '')
+
+    @staticmethod
+    def create_healthcheck_response_message(data: str = '') -> Message:
+        return MessageFactory._create_message(MessageType.RESPONSE, MessageHeader.HEALTHCHECK_MSG_NUM, data)
 
     

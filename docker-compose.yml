@@ -1,4 +1,4 @@
-version: "2.2"
+version: "3.4"
 
 services:
   master:
@@ -8,6 +8,7 @@ services:
       args:
         - PORT_UVICORN=$PORT_UVICORN_MASTER
         - NODE_TYPE=$MASTER_TYPE
+        - DELAY=0
     environment:
       - SECONDARY_INFO=$SECONDARY_INFO
     ports: 
@@ -25,6 +26,7 @@ services:
       args:
         - PORT_UVICORN=$PORT_UVICORN_SECONDARY1
         - NODE_TYPE=$SECONDARY_TYPE
+        - DELAY=0
     environment:
       - PORT=$PORT_SECONDARY1
     ports: 
@@ -45,13 +47,14 @@ services:
       args:
         - PORT_UVICORN=$PORT_UVICORN_SECONDARY2
         - NODE_TYPE=$SECONDARY_TYPE
+        - DELAY=60
     environment:
       - PORT=$PORT_SECONDARY2
     ports: 
       - $PORT_UVICORN_SECONDARY2:$PORT_UVICORN_SECONDARY2
     depends_on: 
       - master
-      - "secondary1"
+      - secondary1
     links:
       - master
     networks:
