@@ -42,7 +42,8 @@ class ReplicationThread(Thread):
     def _wait_before_next_replication_retry(self):
         self.replication_retry_delay_event.wait(self.replication_retry_delay_seconds)
         self.replication_retry_delay_event.clear()
-        self.replication_retry_delay_seconds += math.exp(self.replication_retry_delay_seconds)
+        self.replication_retry_delay_seconds *= 2
+        logging.info(f"Next retry will be in {round(self.replication_retry_delay_seconds, 2)} seconds")
 
     def run(self):        
         try:
@@ -56,12 +57,16 @@ class ReplicationThread(Thread):
 
     def _execute_replication(self) -> bool:
         try:
+            logging.info(f"Replication to secondary '{self.host}:{self.port}' started...")
+
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as secondary_client_socket:
                 secondary_address = (self.host, self.port)
                 secondary_client_socket.connect(secondary_address)
+                logging.info(f"Connected to '{self.host}:{self.port}'.")
                 
                 request_message_buffer = MessageEncoder.encode_message(self.replication_message)     
                 secondary_client_socket.sendall(request_message_buffer)
+                logging.info(f"Replicating data '{self.replication_message.data}'.")
 
                 response_message_header_buffer = secondary_client_socket.recv(MessageEncoder.HEADER_BYTES_SIZE)
                 response_message_header = MessageEncoder.decode_message_header(response_message_header_buffer)
@@ -83,8 +88,10 @@ class ReplicationThread(Thread):
                 if response_message_header.data_size > 0:
                     error_message_buffer = secondary_client_socket.recv(response_message_header.data_size)
                     error_message = error_message_buffer.decode("utf-8")
+                    logging.error(f"Secondary has failed to store data: '{error_message}'.")
                     return False
 
+            logging.info(f"Replication to secondary '{self.host}:{self.port}' successfully ended.")
             return True
             
         except Exception as error:
