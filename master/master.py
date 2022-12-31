@@ -97,7 +97,7 @@ async def get_data():
 
 @app.get("/get_health")
 async def get_health():
-    return { key: value.get_status() for key,value in app.master.health_checkers.items()}
+    return { key: value.get_current_health_status() for key,value in app.master.health_checkers.items()}
 
 @app.post("/append_data")
 def append_data(data: str, write_concern: int):
