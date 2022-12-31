@@ -1,13 +1,11 @@
 import os
 import ast
 import json
-import socket
 import logging
 from typing import List
 from threading import Lock
 from fastapi import FastAPI, HTTPException
 
-# from common.message_encoder import MessageEncoder
 from replication_manager import ReplicationManager
 from health_checker import HealthChecker,HealthStatus
 from common.message import Message, MessageFactory
@@ -15,6 +13,8 @@ from common.message import Message, MessageFactory
 logging.basicConfig(level=logging.INFO)
 
 class Master:
+    QUORUM = 2
+
     def __init__(self) -> None:
         self.message_number = 0
         self.message_number_locker = Lock()
@@ -79,10 +79,10 @@ class Master:
             self.message_number+=1
             return MessageFactory.create_request_message(self.message_number, data)
 
-    def is_write_possible(self, write_concern:int) -> bool:
+    def _check_for_replication_quorum(self) -> bool:
         healthy_nodes_count = len([checker for checker in self.health_checkers.values() 
-                                    if checker.get_status() == HealthStatus.HEALTHY ])+1
-        return  write_concern <= healthy_nodes_count
+                                   if checker.get_current_health_status() == HealthStatus.HEALTHY ])+1
+        return self.QUORUM <= healthy_nodes_count
 
 
 app = FastAPI()
@@ -101,14 +101,13 @@ async def get_health():
 
 @app.post("/append_data")
 def append_data(data: str, write_concern: int):
-    #if not app.master.is_write_possible(write_concern):
-        #return {"Write concern is higher than number of healty nodes."}
+    if not app.master._check_for_replication_quorum():
+        return {f"Appending data is not possible, " + 
+                 "because replication quorum '{app.master.QUORUM}' is not satisfied."}
 
     append_status = app.master.append_data(data, write_concern)
     if not append_status:
         # Possible TODO: Propagate errors to the WebAPI.
         raise HTTPException(500)
         
-    return {f"Appending data '{data}' has succeeded."}
-        
-        
+    return {f"Appending data '{data}' has succeeded."}        
