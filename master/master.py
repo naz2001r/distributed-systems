@@ -110,6 +110,4 @@ def append_data(data: str, write_concern: int):
         # Possible TODO: Propagate errors to the WebAPI.
         raise HTTPException(500)
         
-    return {f"Appending data '{data}' has succeeded."}
-        
-        
+    return {f"Appending data '{data}' has succeeded."}        
