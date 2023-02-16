@@ -21,7 +21,8 @@ class HealthChecker(Thread):
     def __init__(self, host: str, port: int):
         super().__init__()
         super().setDaemon(True)
-        self.health_status = HealthStatus.HEALTHY
+        self.current_health_status = HealthStatus.HEALTHY
+        self.on_health_status_changed_handlers = []
         self.client_socket = None
         self.address = (host, port)
         self.connected = False
@@ -30,8 +31,19 @@ class HealthChecker(Thread):
     def __del__(self):
         self.client_socket.close()
 
-    def get_status(self) -> HealthStatus:
-        return self.health_status
+    def get_current_health_status(self):
+        return self.current_health_status
+
+    def add_health_status_changed_handler(
+        self, 
+        health_status_change_handler: Callable[[HealthStatus], None]) -> None:
+        health_status_change_handler(self.current_health_status)
+        self.on_health_status_changed_handlers.append(health_status_change_handler)
+
+    def _health_status_changed(self, health_status) -> None:
+        self.current_health_status = health_status
+        for health_status_change_handler in self.on_health_status_changed_handlers:
+            health_status_change_handler(health_status)
 
     def _connect(self) -> None:
         try:  
@@ -62,13 +74,13 @@ class HealthChecker(Thread):
                 logging.error("Unexpected message received in health check! " +  
                              f"Expected '{MessageType.RESPONSE}', " +
                              f"but received '{response_header.type}'.")
-                self.health_status = HealthStatus.UNHEALTHY
+                self._health_status_changed(HealthStatus.UNHEALTHY)
 
             if response_header.number != MessageHeader.HEALTHCHECK_MSG_NUM:
                 logging.error("Response message number doesn't correspond to health check message! " +
                              f"Expected '{request.header.number}', "
                              f"but received '{response_header.number}'.")
-                self.health_status = HealthStatus.UNHEALTHY
+                self._health_status_changed(HealthStatus.UNHEALTHY)
 
             # If response doesn't contain any data, it means success.
             # Otherwise, data represents an error message explaining why it has failed.
@@ -76,21 +88,21 @@ class HealthChecker(Thread):
                 error_message_buffer = self.client_socket.recv(response_header.data_size)
                 error_message = error_message_buffer.decode("utf-8")
                 logging.error(f"Secondary has health problem : {error_message}.")
-                self.health_status = HealthStatus.UNHEALTHY
+                self._health_status_changed(HealthStatus.UNHEALTHY)
 
-            self.health_status = HealthStatus.HEALTHY
+            self._health_status_changed(HealthStatus.HEALTHY)
 
         except socket.timeout:
-            self.health_status = HealthStatus.SUSPECTED 
+            self._health_status_changed(HealthStatus.SUSPECTED)
 
         except socket.error:  
             while not self.connected:  
-                self.health_status = HealthStatus.UNHEALTHY
+                self._health_status_changed(HealthStatus.UNHEALTHY)
                 self._wait_before(self._connect)
 
         except Exception as error:
             logging.error(f'Unexpected error: {error}')
-            self.health_status = HealthStatus.UNHEALTHY
+            self._health_status_changed(HealthStatus.UNHEALTHY)
   
     def run(self):
         while True:  

@@ -1,28 +1,22 @@
 from typing import Callable
 from common.message import Message
 
+from health_checker import HealthChecker
 from replication_latch import ReplicationLatch
 from replication_thread import ReplicationThread
 
 class ReplicationManager():
     def __init__(self,
-                 replication_executor: Callable[[str, int, Message], bool],
-                 replication_data: Message,
+                 replication_message: Message,
                  replication_awaited: int) -> None:
-        self.replication_executor = replication_executor
-        self.replication_data = replication_data
+        self.replication_message = replication_message
         self.replication_latch = ReplicationLatch(replication_awaited)
         self.replication_threads = []
 
-    def start_replication(self, host: str, port: int):
-        replication_action = lambda: self.replication_executor(host, port, self.replication_data)
-        replication_thread = ReplicationThread(replication_action, self.replication_latch, host, port)
+    def start_replication(self, host: str, port: int, health_checker: HealthChecker):
+        replication_thread = ReplicationThread(self.replication_message, self.replication_latch, host, port, health_checker)
         replication_thread.start()
         self.replication_threads.append(replication_thread)
-
-    def stop_all_replication(self):
-        for replication_thread in self.replication_threads:
-            replication_thread.stop_replication_retry()
 
     def wait_for_replication(self, timeout: float = None):
         return self.replication_latch.wait_for_replications(timeout=timeout)
