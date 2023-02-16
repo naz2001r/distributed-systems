@@ -1,27 +1,13 @@
 import logging
-import math
 import socket
-<<<<<<< HEAD
 from threading import Event, Thread
-from typing import Callable
 from common.message import Message, MessageType
 from common.message_encoder import MessageEncoder
-=======
-import logging
-
-from typing import Callable
-from threading import Event, Thread
->>>>>>> 8d37201bb30eb16586dd2aacdcf2a5e25dd5d41a
 
 from replication_latch import ReplicationLatch
 from health_checker import HealthChecker,HealthStatus
 
-<<<<<<< HEAD
 logging.basicConfig(level=logging.INFO)
-=======
-from common.message import Message, MessageType
-from common.message_encoder import MessageEncoder
->>>>>>> 8d37201bb30eb16586dd2aacdcf2a5e25dd5d41a
 
 class ReplicationThread(Thread):
     def __init__(self,
@@ -41,11 +27,7 @@ class ReplicationThread(Thread):
 
         health_checker.add_health_status_changed_handler(
             self._adjust_replication_for_health_status
-<<<<<<< HEAD
             )
-=======
-        )
->>>>>>> 8d37201bb30eb16586dd2aacdcf2a5e25dd5d41a
 
     def _adjust_replication_for_health_status(self, health_status: HealthStatus):
         if health_status == HealthStatus.UNHEALTHY:
@@ -53,20 +35,12 @@ class ReplicationThread(Thread):
 
         elif health_status == HealthStatus.HEALTHY:
             self.replication_retry_delay_seconds = 0.1
-<<<<<<< HEAD
             self.replication_retry_delay_event.set()        
-=======
-            self.replication_retry_delay_event.set()  
->>>>>>> 8d37201bb30eb16586dd2aacdcf2a5e25dd5d41a
 
     def _wait_before_next_replication_retry(self):
         self.replication_retry_delay_event.wait(self.replication_retry_delay_seconds)
         self.replication_retry_delay_event.clear()
         self.replication_retry_delay_seconds *= 2
-<<<<<<< HEAD
-=======
-        logging.info(f"Next retry will be in {round(self.replication_retry_delay_seconds, 2)} seconds")
->>>>>>> 8d37201bb30eb16586dd2aacdcf2a5e25dd5d41a
 
     def run(self):        
         try:
@@ -78,10 +52,7 @@ class ReplicationThread(Thread):
         except Exception:
             self.replication_latch.set_replication(False)
 
-<<<<<<< HEAD
 
-=======
->>>>>>> 8d37201bb30eb16586dd2aacdcf2a5e25dd5d41a
     def _execute_replication(self) -> bool:
         try:
             logging.info(f"Replication to secondary '{self.host}:{self.port}' started...")
@@ -123,8 +94,4 @@ class ReplicationThread(Thread):
             
         except Exception as error:
             logging.error(f"Replication to secondaries has failed with the error: {error}")
-<<<<<<< HEAD
             return False
-=======
-            return False
->>>>>>> 8d37201bb30eb16586dd2aacdcf2a5e25dd5d41a
